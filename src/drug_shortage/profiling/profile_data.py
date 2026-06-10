@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +11,28 @@ DEFAULT_CONFIG_PATH = PROJECT_ROOT / "configs" / "sources.yml"
 DEFAULT_REPORT_PATH = PROJECT_ROOT / "docs" / "data_profile.md"
 COMMON_ENCODINGS = ("utf-8-sig", "utf-8", "cp950", "big5")
 SAMPLE_VALUE_LIMIT = 5
+JOIN_KEYWORDS = (
+    "code",
+    "id",
+    "license",
+    "licence",
+    "permit",
+    "number",
+    "no",
+    "atc",
+    "url",
+    "代碼",
+    "代号",
+    "代號",
+    "字號",
+    "字号",
+    "文號",
+    "文号",
+    "許可證",
+    "许可证",
+    "連結",
+    "链接",
+)
 
 
 def load_datasets(config_path: Path = DEFAULT_CONFIG_PATH) -> dict[str, dict[str, Any]]:
@@ -27,7 +51,7 @@ def read_csv_with_encoding(csv_path: Path) -> tuple[pd.DataFrame, str]:
         try:
             return pd.read_csv(csv_path, encoding=encoding, low_memory=False), encoding
         except UnicodeDecodeError as error:
-            errors.append(f"{encoding}: {error}")
+            errors.append(f"{encoding}: {error.reason}")
 
     error_text = "; ".join(errors)
     raise UnicodeDecodeError(
@@ -44,24 +68,24 @@ def sample_values(series: pd.Series) -> list[str]:
     return values.tolist()
 
 
-def candidate_join_columns(columns: list[str]) -> list[str]:
-    keywords = (
-        "code",
-        "id",
-        "license",
-        "permit",
-        "藥品代碼",
-        "健保代碼",
-        "許可證",
-        "許可證字號",
-        "品項",
-        "成分",
-    )
-    return [
-        column
-        for column in columns
-        if any(keyword.lower() in column.lower() for keyword in keywords)
-    ]
+def candidate_join_columns(
+    columns: list[str],
+    column_samples: dict[str, list[str]] | None = None,
+) -> list[str]:
+    candidates: list[str] = []
+    samples_by_column = column_samples or {}
+
+    for column in columns:
+        normalized = column.lower().strip()
+        samples = samples_by_column.get(column, [])
+        sample_text = " ".join(samples).lower()
+
+        keyword_match = any(keyword in normalized for keyword in JOIN_KEYWORDS)
+        url_identifier_match = "licid=" in sample_text or "drugfilename=" in sample_text
+        if keyword_match or url_identifier_match:
+            candidates.append(column)
+
+    return candidates
 
 
 def profile_frame(
@@ -72,15 +96,19 @@ def profile_frame(
 ) -> dict[str, Any]:
     column_profiles = []
     row_count = len(frame)
+    column_samples: dict[str, list[str]] = {}
 
     for column in frame.columns:
+        column_name = str(column)
+        samples = sample_values(frame[column])
+        column_samples[column_name] = samples
         missing_count = int(frame[column].isna().sum())
         missing_ratio = float(missing_count / row_count) if row_count else 0.0
         column_profiles.append(
             {
-                "name": str(column),
+                "name": column_name,
                 "missing_ratio": missing_ratio,
-                "sample_values": sample_values(frame[column]),
+                "sample_values": samples,
             }
         )
 
@@ -95,7 +123,7 @@ def profile_frame(
         "column_count": len(frame.columns),
         "columns": columns,
         "column_profiles": column_profiles,
-        "candidate_join_columns": candidate_join_columns(columns),
+        "candidate_join_columns": candidate_join_columns(columns, column_samples),
     }
 
 
@@ -138,6 +166,11 @@ def profile_dataset(
     return profile_frame(dataset_key, dataset, frame, encoding)
 
 
+def _markdown_cell(value: Any) -> str:
+    text = str(value).replace("\r\n", " ").replace("\n", " ").replace("|", "\\|")
+    return text
+
+
 def render_markdown(profiles: list[dict[str, Any]]) -> str:
     lines = [
         "# Data Profile",
@@ -154,12 +187,12 @@ def render_markdown(profiles: list[dict[str, Any]]) -> str:
         candidate_columns = ", ".join(profile.get("candidate_join_columns", [])) or "-"
         lines.append(
             "| {key} | {status} | {rows} | {columns} | {encoding} | {candidates} |".format(
-                key=profile["key"],
-                status=profile["status"],
+                key=_markdown_cell(profile["key"]),
+                status=_markdown_cell(profile["status"]),
                 rows=profile.get("row_count", "-"),
                 columns=profile.get("column_count", "-"),
-                encoding=profile.get("encoding", "-"),
-                candidates=candidate_columns,
+                encoding=_markdown_cell(profile.get("encoding", "-")),
+                candidates=_markdown_cell(candidate_columns),
             )
         )
 
@@ -167,37 +200,53 @@ def render_markdown(profiles: list[dict[str, Any]]) -> str:
         lines.extend(
             [
                 "",
-                f"## {profile['key']}",
+                f"## {_markdown_cell(profile['key'])}",
                 "",
-                f"- Name: {profile.get('name', profile['key'])}",
+                f"- Name: {_markdown_cell(profile.get('name', profile['key']))}",
+                f"- Local path: `{_markdown_cell(profile.get('local_path'))}`",
+                f"- Status: {_markdown_cell(profile['status'])}",
             ]
         )
-        lines.append(f"- Local path: `{profile.get('local_path')}`")
-        lines.append(f"- Status: {profile['status']}")
 
         if profile["status"] != "profiled":
-            lines.append(f"- Note: {profile.get('message', 'Not profiled.')}")
+            lines.append(f"- Note: {_markdown_cell(profile.get('message', 'Not profiled.'))}")
             continue
 
-        lines.append(f"- Detected encoding: `{profile['encoding']}`")
-        lines.append(f"- Rows: {profile['row_count']}")
-        lines.append(f"- Columns: {profile['column_count']}")
-        lines.append("")
-        lines.append("### Columns")
-        lines.append("")
+        candidate_columns = ", ".join(profile.get("candidate_join_columns", [])) or "-"
+        lines.extend(
+            [
+                f"- Detected encoding: `{_markdown_cell(profile['encoding'])}`",
+                f"- Rows: {profile['row_count']}",
+                f"- Columns: {profile['column_count']}",
+                f"- Candidate join columns: {_markdown_cell(candidate_columns)}",
+                "",
+                "### Columns",
+                "",
+            ]
+        )
         for column in profile["columns"]:
-            lines.append(f"- `{column}`")
+            lines.append(f"- `{_markdown_cell(column)}`")
 
-        lines.append("")
-        lines.append("### Missing Values and Samples")
-        lines.append("")
-        lines.append("| Column | Missing Ratio | Sample Values |")
-        lines.append("| --- | ---: | --- |")
+        lines.extend(
+            [
+                "",
+                "### Missing Values and Samples",
+                "",
+                "| Column | Missing Ratio | Sample Values |",
+                "| --- | ---: | --- |",
+            ]
+        )
         for column_profile in profile["column_profiles"]:
-            samples = ", ".join(f"`{value}`" for value in column_profile["sample_values"]) or "-"
+            samples = ", ".join(
+                f"`{_markdown_cell(value)}`" for value in column_profile["sample_values"]
+            )
             missing_ratio = column_profile["missing_ratio"]
             lines.append(
-                f"| `{column_profile['name']}` | {missing_ratio:.2%} | {samples} |"
+                "| `{name}` | {missing_ratio:.2%} | {samples} |".format(
+                    name=_markdown_cell(column_profile["name"]),
+                    missing_ratio=missing_ratio,
+                    samples=samples or "-",
+                )
             )
 
     return "\n".join(lines) + "\n"
@@ -218,13 +267,18 @@ def profile_all(
     return profiles
 
 
-def print_summary(profiles: list[dict[str, Any]], report_path: Path = DEFAULT_REPORT_PATH) -> None:
+def print_summary(
+    profiles: list[dict[str, Any]],
+    report_path: Path = DEFAULT_REPORT_PATH,
+) -> None:
     print(f"Profiling report written to: {report_path}")
     for profile in profiles:
         if profile["status"] == "profiled":
+            candidates = ", ".join(profile.get("candidate_join_columns", [])) or "-"
             print(
                 f"{profile['key']}: rows={profile['row_count']}, "
-                f"columns={profile['column_count']}, encoding={profile['encoding']}"
+                f"columns={profile['column_count']}, encoding={profile['encoding']}, "
+                f"candidate_join_columns={candidates}"
             )
         else:
             message = profile.get("message", "Not profiled.")
