@@ -52,7 +52,9 @@ uv run drug-shortage build-features
 uv run drug-shortage score
 ```
 
-The pipeline commands are placeholders in this scaffold. They create expected working directories and confirm the command surface without reading or processing `data/raw/`.
+`profile-data` reads the CSV files listed in `configs/sources.yml`, tries common encodings, prints a concise profile, and writes `docs/data_profile.md`.
+
+The other pipeline commands are placeholders in this scaffold. They create expected working directories and confirm the command surface.
 
 ## Data Policy
 
@@ -62,4 +64,4 @@ Generated outputs should be written as Parquet files under `data/processed/`. Lo
 
 ## Current Scope
 
-This scaffold prepares the repository structure only. The next implementation step is to profile the raw public CSV files, define stable schemas, and design explainable scoring rules before writing any production transformations.
+The next implementation step is to review `docs/data_profile.md`, define stable schemas and join keys, and design explainable scoring rules before writing production transformations.
