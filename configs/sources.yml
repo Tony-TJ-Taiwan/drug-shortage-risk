@@ -1,0 +1,40 @@
+datasets:
+  tfda_license:
+    name: "TFDA 藥品許可證資料"
+    purpose: "供應商、製造商、許可證、進口依賴"
+    local_path: "data/raw/TFDA 藥品許可證資料.csv"
+    source_type: "public_csv"
+    update_frequency: "weekly"
+    expected_role: "license_master"
+
+  nhi_drug_items:
+    name: "健保用藥品項查詢項目檔"
+    purpose: "藥品代碼、ATC、規格、價格、劑型"
+    local_path: "data/raw/健保用藥品項查詢項目檔.csv"
+    source_type: "public_csv"
+    update_frequency: "monthly"
+    expected_role: "drug_item_master"
+
+  nhi_claims_113:
+    name: "113年健保藥品申報量"
+    purpose: "需求量、需求成長、需求波動"
+    local_path: "data/raw/113年健保藥品申報量.csv"
+    source_type: "public_csv"
+    update_frequency: "yearly"
+    expected_role: "demand_signal"
+
+  recalls:
+    name: "回收藥品資料"
+    purpose: "品質與製造風險訊號"
+    local_path: "data/raw/回收藥品資料.csv"
+    source_type: "public_csv"
+    update_frequency: "daily"
+    expected_role: "recall_signal"
+
+  global_shortage:
+    name: "FDA / ASHP / openFDA shortage"
+    purpose: "國際短缺訊號"
+    local_path: null
+    source_type: "api_or_web"
+    update_frequency: "daily_or_weekly"
+    expected_role: "global_shortage_signal"
