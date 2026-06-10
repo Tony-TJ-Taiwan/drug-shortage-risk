@@ -1,4 +1,4 @@
-.PHONY: install lint test profile-data build-master build-features score
+.PHONY: install lint test profile-data create-sample-data build-master build-features score
 
 install:
 	uv sync
@@ -11,6 +11,9 @@ test:
 
 profile-data:
 	uv run drug-shortage profile-data
+
+create-sample-data:
+	uv run drug-shortage create-sample-data
 
 build-master:
 	uv run drug-shortage build-master

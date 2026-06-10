@@ -35,6 +35,7 @@ make install
 make lint
 make test
 make profile-data
+make create-sample-data
 make build-master
 make build-features
 make score
@@ -47,12 +48,22 @@ uv sync
 uv run ruff check src tests
 uv run pytest -q
 uv run drug-shortage profile-data
+uv run drug-shortage create-sample-data
 uv run drug-shortage build-master
 uv run drug-shortage build-features
 uv run drug-shortage score
 ```
 
 `profile-data` reads the CSV files listed in `configs/sources.yml`, tries common encodings, prints a concise profile, and writes `docs/data_profile.md`.
+
+`create-sample-data` reads the local public CSV files listed in `configs/sources.yml` and writes small UTF-8 CSV fixtures under `data/sample/`:
+
+- `data/sample/sample_licenses.csv`
+- `data/sample/sample_nhi_items.csv`
+- `data/sample/sample_claims.csv`
+- `data/sample/sample_recalls.csv`
+
+The command preserves source column names, keeps only a small number of rows, and prefers rows with joinable NHI item codes and license identifiers when those relationships are detectable. Any join limitations, including the current one-year claims limitation for YoY growth, are written to `docs/data_profile.md`.
 
 The other pipeline commands are placeholders in this scaffold. They create expected working directories and confirm the command surface.
 

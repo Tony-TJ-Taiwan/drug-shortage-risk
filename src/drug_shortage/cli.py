@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+from drug_shortage.profiling import create_sample_data
 from drug_shortage.profiling.profile_data import print_summary, profile_all
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -30,6 +31,12 @@ def run_profile_data() -> int:
     return 0
 
 
+def run_create_sample_data() -> int:
+    results, limitations = create_sample_data.create_sample_data()
+    create_sample_data.print_summary(results, limitations)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="drug-shortage",
@@ -37,7 +44,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    for command in ("profile-data", "build-master", "build-features", "score"):
+    for command in (
+        "profile-data",
+        "create-sample-data",
+        "build-master",
+        "build-features",
+        "score",
+    ):
         subparsers.add_parser(command)
 
     return parser
@@ -47,6 +60,8 @@ def main() -> int:
     args = build_parser().parse_args()
     if args.command == "profile-data":
         return run_profile_data()
+    if args.command == "create-sample-data":
+        return run_create_sample_data()
     return run_placeholder(args.command)
 
 
