@@ -65,7 +65,11 @@ uv run drug-shortage score
 
 The command preserves source column names, keeps only a small number of rows, and prefers rows with joinable NHI item codes and license identifiers when those relationships are detectable. Any join limitations, including the current one-year claims limitation for YoY growth, are written to `docs/data_profile.md`.
 
-The other pipeline commands are placeholders in this scaffold. They create expected working directories and confirm the command surface.
+`build-master` joins sample NHI drug items with sample TFDA license data, keeps the latest NHI history row per drug code, normalizes ingredient, dosage form, and strength fields, and writes `data/processed/drug_master.parquet`. Missing optional fields are left null, and missing shortage group parts are represented as `UNKNOWN` in `shortage_group_key`.
+
+`build-features` reads `data/processed/drug_master.parquet`, calculates supply fragility features per `shortage_group_key`, and writes `data/processed/features_supply.parquet`. It also joins `data/sample/sample_claims.csv` to the master table, calculates demand pressure features, and writes `data/processed/features_demand.parquet`. Recall signal features are matched from `data/sample/sample_recalls.csv` by license number first, then by product name only when license number is missing, and written to `data/processed/features_recall.parquet`. With the current 113-year sample claims only, YoY growth and 3-year CV are documented as unavailable.
+
+`score` reads the master and feature Parquet files, applies rule-based weights from `configs/scoring.yml`, and writes `data/processed/shortage_risk_scores.parquet`. Scores are explainable 0-100 values; the pipeline does not use machine learning.
 
 ## Data Policy
 

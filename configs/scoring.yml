@@ -1,0 +1,34 @@
+weights:
+  supply_score: 35
+  demand_score: 25
+  recall_score: 20
+  global_shortage_score: 10
+  price_or_exit_score: 10
+
+missing_component_policy: renormalize_available
+
+supply_rules:
+  active_license_count:
+    missing_or_zero_points: 60
+    single_license_points: 45
+    two_license_points: 20
+    three_or_more_points: 0
+  single_supplier_points: 35
+  import_manufacturer_ratio_max_points: 15
+  expiring_license_points_each: 10
+  max_score: 100
+
+demand_rules:
+  demand_rank_percentile_max_points: 70
+  demand_share_within_group_max_points: 20
+  yoy_growth_max_points: 10
+  yoy_growth_full_points_at: 1.0
+  three_year_cv_max_points: 10
+  three_year_cv_full_points_at: 1.0
+  max_score: 100
+
+recall_rules:
+  recall_12m_points_each: 35
+  recall_24m_points_each: 15
+  severe_recall_points: 50
+  max_score: 100
