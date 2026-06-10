@@ -1,4 +1,4 @@
-.PHONY: install lint test profile-data create-sample-data build-master build-features score
+.PHONY: install lint test profile-data create-sample-data build-master build-features score dashboard
 
 install:
 	uv sync
@@ -23,3 +23,6 @@ build-features:
 
 score:
 	uv run drug-shortage score
+
+dashboard:
+	uv run streamlit run src/drug_shortage/dashboard/app.py

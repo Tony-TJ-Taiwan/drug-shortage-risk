@@ -39,6 +39,7 @@ make create-sample-data
 make build-master
 make build-features
 make score
+make dashboard
 ```
 
 PowerShell alternatives without `make`:
@@ -52,6 +53,7 @@ uv run drug-shortage create-sample-data
 uv run drug-shortage build-master
 uv run drug-shortage build-features
 uv run drug-shortage score
+uv run streamlit run src/drug_shortage/dashboard/app.py
 ```
 
 `profile-data` reads the CSV files listed in `configs/sources.yml`, tries common encodings, prints a concise profile, and writes `docs/data_profile.md`.
@@ -70,6 +72,28 @@ The command preserves source column names, keeps only a small number of rows, an
 `build-features` reads `data/processed/drug_master.parquet`, calculates supply fragility features per `shortage_group_key`, and writes `data/processed/features_supply.parquet`. It also joins `data/sample/sample_claims.csv` to the master table, calculates demand pressure features, and writes `data/processed/features_demand.parquet`. Recall signal features are matched from `data/sample/sample_recalls.csv` by license number first, then by product name only when license number is missing, and written to `data/processed/features_recall.parquet`. With the current 113-year sample claims only, YoY growth and 3-year CV are documented as unavailable.
 
 `score` reads the master and feature Parquet files, applies rule-based weights from `configs/scoring.yml`, and writes `data/processed/shortage_risk_scores.parquet`. Scores are explainable 0-100 values; the pipeline does not use machine learning.
+
+`dashboard` opens a simple Streamlit dashboard over `data/processed/shortage_risk_scores.parquet`.
+It shows the top 50 highest-risk scored groups, risk-level filtering, available ingredient,
+ATC code, and manufacturer filters, total risk scores, component score breakdowns, risk
+explanations, data freshness, and missing-data limitations. If the score file does not exist,
+run:
+
+```powershell
+uv run drug-shortage score
+```
+
+Then start the dashboard:
+
+```powershell
+make dashboard
+```
+
+Windows PowerShell alternative without `make`:
+
+```powershell
+uv run streamlit run src/drug_shortage/dashboard/app.py
+```
 
 ## Data Policy
 
